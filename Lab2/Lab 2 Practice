@@ -1,0 +1,259 @@
+-- Set the database context
+USE AdventureWorks2008R2; 
+-- Or any version of AdventureWorks after it
+-- SQL JOINs are used to retrieve data from multiple tables.
+-- INNER is the default when JOIN is the only keyword used.
+-- INNER JOIN returns only matching rows from left and right tables.
+-- c is the alias for the Sales.Customer table in the example.
+-- oh is the alias for the Sales.SalesOrderHeader table.
+-- ON lists the matching columns to JOIN on.
+
+/*
+If two tables have the same column name in a query, we must
+designate where the column is from by using the format
+TableName.ColumnName.
+If a column name is unique between the JOINed tables,
+The TableName.ColumnName format is not required.
+*/
+with cte as (
+SELECT c.CustomerID, c.AccountNumber, SalesOrderID, OrderDate
+FROM Sales.Customer c
+INNER JOIN Sales.SalesOrderHeader oh
+ON c.CustomerID = oh.CustomerID
+) select count(*) from cte;
+
+/*
+LEFT OUTER JOIN returns all rows from the left table,
+but only the matching rows from the right table.
+*/
+with cte as (
+SELECT c.CustomerID, c.AccountNumber, SalesOrderID, OrderDate
+FROM Sales.Customer c
+LEFT OUTER JOIN Sales.SalesOrderHeader oh
+ON c.CustomerID = oh.CustomerID) select count(*) from cte;
+
+/*
+RIGHT OUTER JOIN returns all rows from the right table,
+but only the matching rows from the left table.
+*/
+select count(*) from (
+SELECT c.CustomerID, c.AccountNumber, SalesOrderID, OrderDate
+FROM Sales.Customer c
+RIGHT OUTER JOIN Sales.SalesOrderHeader oh
+ON c.CustomerID = oh.CustomerID)a
+
+
+
+
+SELECT c.CustomerID,
+PersonID,
+COUNT(SalesOrderID) AS "Total Order"
+FROM Sales.Customer c
+INNER JOIN Sales.SalesOrderHeader oh
+ON c.CustomerID = oh.CustomerID
+GROUP BY c.CustomerID, PersonID
+ORDER BY "Total Order" DESC
+
+
+SELECT c.CustomerID, 
+       PersonID, 
+       COUNT(SalesOrderID) AS "Total Order" 
+FROM Sales.Customer c INNER JOIN Sales.SalesOrderHeader oh 
+ON c.CustomerID = oh.CustomerID 
+GROUP BY c.CustomerID, PersonID 
+HAVING COUNT(SalesOrderID) > 20 
+ORDER BY "Total Order" DESC;
+
+
+SELECT ProductID, Name, Color, ListPrice, SellStartDate 
+FROM Production.Product 
+WHERE Color IN ('Red', 'Blue', 'White') -- character comparison 
+ORDER BY Color, Name;  
+ 
+SELECT ProductID, Name, Color, ListPrice, SellStartDate 
+FROM Production.Product 
+WHERE ListPrice IN (337.22, 594.83, 63.50, 8.99) -- numeric comparison 
+ORDER BY ListPrice;
+ 
+-- LIKE operator 
+-- Select any person whose last name begins with a 
+-- % is the wildcard symbol representing 0 to many characters 
+-- - is the wildcard symbol representing exactly one character 
+ 
+SELECT FirstName, MiddleName, LastName 
+FROM Person.Person 
+WHERE LastName LIKE 'a%' 
+ORDER BY LastName; 
+ 
+-- Select any person whose last name begins with a or c or e 
+ 
+SELECT FirstName, MiddleName, LastName 
+FROM Person.Person 
+WHERE LastName LIKE '[ace]%' 
+ORDER BY LastName;
+
+
+SELECT Name [Product],  
+   ListPrice, 
+   (SELECT MAX(ListPrice) FROM Production.Product) AS [Max Price], 
+   (ListPrice / (SELECT MAX(ListPrice) FROM Production.Product)) * 100 AS [Percent of MAX]  
+FROM Production.Product 
+WHERE ListPrice > 0 
+ORDER BY ListPrice DESC;
+
+------------------------------------------------------------------------
+
+--2-1 
+ 
+/* Write a query to retrieve all orders processed by salespersons 276 
+   or 277 which had an total due value greater than $100,000. Include 
+   the salesperson id, sales order id, order date and total due columns 
+   in the returned data. 
+ 
+   Use the CAST function in the SELECT clause to display the date 
+   only for the order date. Use ROUND to display only two decimal  
+   places for the total due amount. Use an alias to give a descriptive 
+   column heading if a column heading is missing. Sort the returned 
+   data first by the SalesPerson ID, then order date. 
+ 
+   Hint: (a) Use the Sales.SalesOrderHeader table. 
+         (b) The syntax for CAST is CAST(expression AS data_type), 
+             where expression is the column name we want to format and 
+             we can use DATE as data_type for this question to display 
+             just the date.  
+         (c) The syntax for ROUND is ROUND(expression, position_to_round), 
+             where expression is the column name we want to format and 
+             we can use 2 for position_to_round to display two decimal 
+       places. */ 
+
+
+select SalesPersonID, SalesOrderID, 
+cast(OrderDate as date) as "Order Date", --decimal(10,2)
+round(TotalDue, 2) as "Total Due"
+from Sales.SalesOrderHeader
+where SalesPersonID in (276, 277) and 
+TotalDue > 100000
+order by SalesPersonID, OrderDate
+
+--2-2 
+
+/* List the territory id, total number of orders and total sales amount 
+   for each sales territory. Use the TotalDue column for calculating the  
+   total sales amount. Include only the sales territories which 
+   have a total order count greater than 3500. 
+    
+   Use a column alias to make the report look more presentable. Use ROUND and CAST  
+   to display the total sales amount as a rounded integer. Sort the returned  
+   data by the territory id. 
+ 
+   Hint: You need to work with the Sales.SalesOrderHeader table. */ 
+
+select TerritoryID, 
+count(SalesOrderID) as 'Total Number of Orders', 
+cast(round(sum(TotalDue), 2) as int) as 'Total Sales Amount'
+from sales.SalesOrderHeader
+group by TerritoryID
+HAVING COUNT(SalesOrderID) > 3500
+order by TerritoryID;
+
+--2-3 
+
+/* Write a query to select the product id, name, list price, and  
+   sell start date for the product(s) that have a list price greater 
+   than the highest list price - $1,000. Display only the date  
+   for the sell start date and make sure all columns have a descriptive 
+   heading. Sort the returned data by the list price in descending. 
+ 
+   Hint: You’ll need to use a simple subquery in a WHERE clause. */ 
+ 
+select ProductID, Name, ListPrice, 
+cast(SellStartDate as date) as 'Sell Start Date'
+from Production.Product
+where ListPrice > (select max(ListPrice) from Production.Product ) - 1000
+order by ListPrice desc	  
+
+
+
+-- 2-4
+
+/* Write a query to retrieve the total sold quantity for each product. 
+   Return only the products that have a total sold quantity greater than 3000 
+   and have the black color. 
+ 
+   Use a column alias to make the report look more presentable. 
+   Sort the returned data by the total sold quantity in the descending order. 
+   Include the product ID, product name and total sold quantity columns  
+   in the report. 
+ 
+   Hint: Use the Sales.SalesOrderDetail and Production.Product tables. */
+
+select p.ProductID as 'Product ID', 
+p.Name as 'Product Name',
+sum(sod.OrderQty) as 'Total Sold Quantity'	
+from Production.Product p 
+inner join Sales.SalesOrderDetail sod 
+on sod.ProductID = p.ProductID
+group by p.ProductID, p.Name
+HAVING sum(sod.OrderQty) > 3000
+order by 'Total Sold Quantity' desc
+
+--2-5 
+/* Write a query to retrieve the dates in which there was  
+   at least one product sold but no product in red 
+   was sold.  
+    
+   Return the "date" and "total product quantity sold 
+   for the date" columns. Use OrderQty in SalesOrderDetail 
+   for calculating "total product quantity sold for the date". 
+ 
+   Sort the returned data by the 
+   "total product quantity sold for the date" column in desc. */ 
+
+select cast(soh.OrderDate as date) as 'Order Date',
+sum(sod.OrderQty) as 'Total Product Quantity Sold for the Date'
+from Production.Product p 
+inner join Sales.SalesOrderDetail sod 
+on sod.ProductID = p.ProductID
+inner join Sales.SalesOrderHeader soh
+on sod.SalesOrderID = soh.SalesOrderID
+WHERE p.Color <> 'Red'
+group by soh.OrderDate
+HAVING sum(sod.OrderQty)>0
+order by 'Total Product Quantity Sold for the Date' desc
+
+
+
+--2-6  
+/* Write a query to retrieve a customer's 
+   overall purchase and highest annual purchase. 
+   Use TotalDue in SalesOrderHeader for calculating purchase. 
+    
+   Include the "Customer ID", "Last name", "First name", 
+   "Overall purchase" and "Highest annual purchase" columns 
+   in the returned data. Return only the customers who had 
+   a total purchase greater than $500,000. 
+       
+   Sort the returned data by a customer's overall purchase in descending.  */ 
+
+select soh.CustomerID, sum(soh.TotalDue) as 'Overall Purchase' from Sales.SalesOrderHeader soh 
+
+
+
+select c.CustomerID, p.LastName as 'Last Name', p.FirstName as 'First Name', sum(soh.TotalDue) as 'Overall Purchase', max(soh.TotalDue) as 'Highest Annual Purchase' from Person.Person p
+inner join Sales.SalesOrderHeader soh 
+on p.BusinessEntityID = soh.CustomerID 
+inner join Sales.Customer c 
+on c.CustomerID = soh.CustomerID
+group by c.CustomerID , year(soh.OrderDate), p.FirstName , p.LastName 
+order by c.CustomerID 
+
+select c.CustomerID, p.LastName as 'Last Name', p.FirstName as 'First Name', sum(soh.TotalDue) as 'Overall Purchase' from Person.Person p
+inner join Sales.SalesOrderHeader soh 
+on p.BusinessEntityID = soh.CustomerID 
+inner join Sales.Customer c 
+on c.CustomerID = soh.CustomerID
+group by c.CustomerID, p.FirstName , p.LastName 
+--having sum(soh.TotalDue) > 500000
+order by sum(soh.TotalDue) desc 
+
+

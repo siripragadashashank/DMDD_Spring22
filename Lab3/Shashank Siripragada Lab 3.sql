@@ -120,28 +120,14 @@ order by OrderDate
    Sort the returned data by the total number of different 
    products purchased by a customer in the descending order.  
    Include only the customer id in the report. */ 
- 
- select soh.CustomerID
- --, sod.ProductID
- , sum(sod.OrderQty) as [Order Qty]
- , count(*) as cnt
- --, RANK() OVER  (PARTITION BY soh.CustomerID ORDER BY sod.ProductID desc) AS Rank
- --, RANK() OVER  (PARTITION BY soh.CustomerID, sum(sod.OrderQty) ORDER BY sod.ProductID desc) AS Rank2
- from Sales.SalesOrderHeader soh
- left join Sales.SalesOrderDetail sod on soh.SalesOrderID = sod.SalesOrderID
-group by soh.CustomerId--, sod.ProductID
---having count(distinct sod.ProductID) > 10
-order by CustomerID
 
 
  select soh.CustomerID
- , sod.ProductID
- , sod.OrderQty
- --, count(*) as cnt
- --, RANK() OVER  (PARTITION BY soh.CustomerID ORDER BY sod.ProductID desc) AS Rank
- --, RANK() OVER  (PARTITION BY soh.CustomerID, sum(sod.OrderQty) ORDER BY sod.ProductID desc) AS Rank2
+ --, count( sod.ProductID) as ProdCount
+ --, sum(sod.OrderQty) as [Total no. of Different Products]
  from Sales.SalesOrderHeader soh
  left join Sales.SalesOrderDetail sod on soh.SalesOrderID = sod.SalesOrderID
---group by soh.CustomerID, sod.ProductID
---having count(distinct sod.ProductID) > 10
-order by CustomerID
+group by soh.CustomerID
+having count( sod.ProductID) > 10
+and sum(sod.OrderQty)=count( sod.ProductID)
+order by sum(sod.OrderQty) desc

@@ -123,12 +123,12 @@ order by OrderDate
    Include only the customer id in the report. */ 
 
 
- select soh.CustomerID
+select 
+soh.CustomerID
  --, count( distinct sod.ProductID) as ProdCount
  --, sum(sod.OrderQty) as [Total no. of Different Products]
- from Sales.SalesOrderHeader soh
- left join Sales.SalesOrderDetail sod on soh.SalesOrderID = sod.SalesOrderID
+from Sales.SalesOrderHeader soh
+left join Sales.SalesOrderDetail sod on soh.SalesOrderID = sod.SalesOrderID
 group by soh.CustomerID
-having count(distinct sod.ProductID) > 10
-and sum(sod.OrderQty)=count(distinct sod.ProductID)
+having count(distinct sod.ProductID) > 10 and count(distinct sod.ProductID)=sum(sod.OrderQty)
 order by sum(sod.OrderQty) desc

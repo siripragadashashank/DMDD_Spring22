@@ -125,6 +125,28 @@ order by OrderDate
  from Sales.SalesOrderHeader soh
  left join Sales.SalesOrderDetail sod on soh.SalesOrderID = sod.SalesOrderID
 group by soh.CustomerID
+having count(distinct sod.ProductID) > 10
+and sum(sod.OrderQty)=count(distinct sod.ProductID)
+order by sum(sod.OrderQty) desc
+
+
+ select soh.CustomerID
+ , count( sod.ProductID) as ProdCount
+ , count(distinct sod.ProductID) as ProdCountDist
+, sum(sod.OrderQty) as [Total no. of Different Products]
+ from Sales.SalesOrderHeader soh
+ left join Sales.SalesOrderDetail sod on soh.SalesOrderID = sod.SalesOrderID
+group by soh.CustomerID
 having count( sod.ProductID) > 10
 and sum(sod.OrderQty)=count( sod.ProductID)
 order by sum(sod.OrderQty) desc
+
+
+ select soh.CustomerID
+ ,sod.ProductID
+, sod.OrderQty
+ from Sales.SalesOrderHeader soh
+ left join Sales.SalesOrderDetail sod on soh.SalesOrderID = sod.SalesOrderID
+
+where soh.CustomerID=12054
+order by sod.ProductID

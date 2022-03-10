@@ -37,7 +37,6 @@ ORDER BY p.LastName, p.FirstName;
 SELECT o.TerritoryID, s.Name, o.SalesPersonID, 
 COUNT(o.SalesOrderid) [Total Orders] 
 , RANK() OVER  (PARTITION BY o.TerritoryID  ORDER BY COUNT(o.SalesOrderid) DESC) AS Rank
-		
 FROM Sales.SalesOrderHeader o 
 JOIN Sales.SalesTerritory s 
    ON o.TerritoryID = s.TerritoryID 
@@ -63,21 +62,18 @@ Select
 City
 , ShipToAddressID
 , ProductID
-, Name as [Most Popular Product Name]
 , [Total Sold Quantity]
 from (
 SELECT 
 soh.ShipToAddressID
 , pa.City as City
 , sod.ProductID
-, prod.Name
 , sum(sod.OrderQty) as [Total Sold Quantity]
 , RANK() OVER  (PARTITION BY soh.ShipToAddressID  ORDER BY sum(sod.OrderQty) DESC) AS Rank
 FROM Sales.SalesOrderHeader soh 
 JOIN Sales.SalesOrderDetail sod ON soh.SalesOrderID = sod.SalesOrderID
-join Production.Product prod on sod.ProductID=prod.ProductID
 join Person.Address pa on soh.ShipToAddressID = pa.AddressID
-group by soh.ShipToAddressID, pa.City, sod.ProductID, prod.Name
+group by soh.ShipToAddressID, pa.City, sod.ProductID
 having sum(sod.OrderQty)>100
 )a where rank=1
 order by City
@@ -101,13 +97,11 @@ from (
 SELECT 
 soh.OrderDate
 , sod.ProductID
-, prod.Name as [Top Selling Product Name]
 , sum(sod.OrderQty) as [Total Sold Quantity]
 , RANK() OVER  (PARTITION BY soh.OrderDate ORDER BY sum(sod.OrderQty) DESC) AS Rank
 FROM Sales.SalesOrderHeader soh
 JOIN Sales.SalesOrderDetail sod ON soh.SalesOrderID = sod.SalesOrderID
-join Production.Product prod on sod.ProductID=prod.ProductID
-group by  sod.ProductID, prod.Name, soh.OrderDate 
+group by  sod.ProductID, soh.OrderDate 
 )a
 where Rank=1
 order by OrderDate
@@ -127,11 +121,11 @@ order by OrderDate
 
 
  select soh.CustomerID
- --, count( sod.ProductID) as ProdCount
+ --, count( distinct sod.ProductID) as ProdCount
  --, sum(sod.OrderQty) as [Total no. of Different Products]
  from Sales.SalesOrderHeader soh
  left join Sales.SalesOrderDetail sod on soh.SalesOrderID = sod.SalesOrderID
 group by soh.CustomerID
-having count( sod.ProductID) > 10
-and sum(sod.OrderQty)=count( sod.ProductID)
+having count(distinct sod.ProductID) > 10
+and sum(sod.OrderQty)=count(distinct sod.ProductID)
 order by sum(sod.OrderQty) desc

@@ -59,25 +59,19 @@ ORDER BY o.TerritoryID;
    popular product in the city for the returned data.  
    Sort the returned data by City. */ 
 
-Select 
-City
-, ShipToAddressID
+Select City
 , ProductID
-, Name as [Most Popular Product Name]
 , [Total Sold Quantity]
 from (
 SELECT 
-soh.ShipToAddressID
-, pa.City as City
+soh.ShipToAddressID as City
 , sod.ProductID
-, prod.Name
 , sum(sod.OrderQty) as [Total Sold Quantity]
 , RANK() OVER  (PARTITION BY soh.ShipToAddressID  ORDER BY sum(sod.OrderQty) DESC) AS Rank
 FROM Sales.SalesOrderHeader soh 
 JOIN Sales.SalesOrderDetail sod ON soh.SalesOrderID = sod.SalesOrderID
 join Production.Product prod on sod.ProductID=prod.ProductID
-join Person.Address pa on soh.ShipToAddressID = pa.AddressID
-group by soh.ShipToAddressID, pa.City, sod.ProductID, prod.Name
+group by soh.ShipToAddressID, sod.ProductID
 having sum(sod.OrderQty)>100
 )a where rank=1
 order by City
@@ -101,13 +95,12 @@ from (
 SELECT 
 soh.OrderDate
 , sod.ProductID
-, prod.Name as [Top Selling Product Name]
 , sum(sod.OrderQty) as [Total Sold Quantity]
 , RANK() OVER  (PARTITION BY soh.OrderDate ORDER BY sum(sod.OrderQty) DESC) AS Rank
 FROM Sales.SalesOrderHeader soh
 JOIN Sales.SalesOrderDetail sod ON soh.SalesOrderID = sod.SalesOrderID
 join Production.Product prod on sod.ProductID=prod.ProductID
-group by  sod.ProductID, prod.Name, soh.OrderDate 
+group by  sod.ProductID, soh.OrderDate 
 )a
 where Rank=1
 order by OrderDate

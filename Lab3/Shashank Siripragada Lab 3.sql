@@ -61,7 +61,7 @@ ORDER BY o.TerritoryID;
 
 Select 
 City
-, ShipToAddressID
+--, ShipToAddressID
 , ProductID
 , [Total Sold Quantity]
 from (
@@ -128,7 +128,8 @@ soh.CustomerID
  --, count( distinct sod.ProductID) as ProdCount
  --, sum(sod.OrderQty) as [Total no. of Different Products]
 from Sales.SalesOrderHeader soh
-left join Sales.SalesOrderDetail sod on soh.SalesOrderID = sod.SalesOrderID
+join Sales.SalesOrderDetail sod 
+on soh.SalesOrderID = sod.SalesOrderID
 group by soh.CustomerID
 having count(distinct sod.ProductID) > 10 and count(distinct sod.ProductID)=sum(sod.OrderQty)
 order by sum(sod.OrderQty) desc

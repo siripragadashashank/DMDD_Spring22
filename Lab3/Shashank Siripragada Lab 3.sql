@@ -1,8 +1,9 @@
 
 USE AdventureWorks2008R2;
 
+/*
 --Lab 3-1 
-/* Modify the following query to add a column that identifies the 
+ Modify the following query to add a column that identifies the 
    performance of salespersons and contains the following feedback 
    based on the number of orders processed by a salesperson: 
  
@@ -29,8 +30,8 @@ GROUP BY o.SalesPersonID, p.LastName, p.FirstName
 ORDER BY p.LastName, p.FirstName; 
  
  
---Lab 3-2 
-/* Modify the following query to add a new column named rank. 
+/* --Lab 3-2 
+ Modify the following query to add a new column named rank. 
    The new column is based on ranking with gaps according to 
    the total orders in descending. Also partition by the territory.*/ 
  
@@ -45,9 +46,9 @@ GROUP BY o.TerritoryID, s.Name, o.SalesPersonID
 ORDER BY o.TerritoryID; 
  
  
- 
+/* 
 --Lab 3-3 
-/* Write a query to retrieve the most popular product of each city. 
+ Write a query to retrieve the most popular product of each city. 
    The most popular product has the highest total sold quantity in a city. 
    Use OrderQty in SalesOrderDetail for calculating the total sold quantity. 
    Use ShipToAddressID in SalesOrderHeader to determine what city a product  
@@ -78,8 +79,9 @@ having sum(sod.OrderQty)>100
 )a where rank=1
 order by City
  
+/*
 --Lab 3-4 
-/* Retrieve the top selling product of each day. 
+ Retrieve the top selling product of each day. 
    Use the total sold quantity to determine the top selling product. 
    The top selling product has the highest total sold quantity. 
    If there is a tie, the solution must pick up the tie. 
@@ -106,8 +108,9 @@ group by  sod.ProductID, soh.OrderDate
 where Rank=1
 order by OrderDate
 
+/*
 --Lab 3-5 
-/* Write a query to retrieve the customers who have purchased 
+ Write a query to retrieve the customers who have purchased 
    more than ten different products and never purchased 
    the same product for all of their orders.  
     

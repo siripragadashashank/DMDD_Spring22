@@ -17,30 +17,30 @@
              was no sale in the database for the requested 
              period. */ 
 
-USE shashank;
+use shashank;
 
-DROP FUNCTION dbo.totalsalesyearmonth;
+drop function dbo.TotalSales;
 
-CREATE FUNCTION dbo.totalsalesyearmonth
-(@y INT, @m INT)
-RETURNS FLOAT
-AS
-BEGIN
-	DECLARE @totalsum FLOAT;
-	IF EXISTS (SELECT TotalDue
-		FROM AdventureWorks2008R2.sales.salesOrderHeader
-		WHERE YEAR(OrderDate) = @y AND MONTH(OrderDate) = @m)
-	SELECT @totalsum = sum(TotalDue)
-		FROM AdventureWorks2008R2.sales.salesOrderHeader
-		WHERE YEAR(OrderDate) = @y AND MONTH(OrderDate) = @m;
-	ELSE
-		BEGIN
-			SET @totalsum = 0;
-		END
-	RETURN @totalsum;
-END;
+create function dbo.TotalSales (@year int, @month int) returns float as
+begin
+	declare @totalsum float;
+	if exists
+	(
+		select soh.TotalDue from AdventureWorks2008R2.Sales.SalesOrderHeader soh
+		where year(soh.OrderDate) = @year and 
+			  month(soh.OrderDate) = @month
+	)
+	select @totalsum = sum(soh.TotalDue) from AdventureWorks2008R2.Sales.SalesOrderHeader soh
+	where year(soh.OrderDate) = @year and 
+	      month(soh.OrderDate) = @month
+	else
+		begin
+			set @totalsum = 0;
+		end
+	return @totalsum;
+end;
 
-SELECT dbo.totalsalesyearmonth(2008,12); -- Trial run Lab 5-1
+SELECT dbo.TotalSales(2005,12) as TotalSalesYearMonth;
 
 
 ----- 5-2
@@ -59,44 +59,52 @@ The stored procedure then populates all columns of the
 DateRange table according to the two provided parameters.
 */
 
+use shashank;
 
-DROP TABLE dbo.DateRange;
-DROP PROCEDURE dbo.populatetable;
+drop table dbo.DateRange;
+drop procedure dbo.sp_DateRange;
 
+CREATE TABLE dbo.DateRange 
+(
+DateID INT IDENTITY,
+DateValue DATE,
+Month INT,
+DayOfWeek INT
+);
 
-CREATE TABLE
-	dbo.DateRange (DateID INT IDENTITY,
-	DateValue DATE,
-	Month INT,
-	DayOfWeek INT);
+create procedure dbo.sp_DateRange @startdate DATE, @ndays INT as
+begin
+	while @ndays <> 0
+	begin
+		insert into dbo.DateRange (DateValue, Month, DayOfWeek)
+		select @startdate
+			 , month(@startdate)
+			 , datepart(dw, @startdate)
+		set @startdate = DATEADD(d, 1, @startdate);
+		set @ndays = @ndays - 1;
+	end
+end
 
-CREATE PROCEDURE dbo.populatetable
-	@d DATE,@n INT
-AS
-BEGIN
-	WHILE @n <> 0
-		BEGIN
-			INSERT INTO dbo.DateRange (DateValue,Month,DayOfWeek)
-			SELECT @d,MONTH(@d),DATEPART(dw,@d)
-			SET @d = DATEADD(d,1,@d);
-			SET @n = @n - 1;
-		END
-END
--- Trial run Lab 5-2
-DECLARE @d DATE;
-DECLARE @n INT;
+declare @ndays int;
+declare @startdate date;
+set @ndays = 7;
+set @startdate = GETDATE();
+exec dbo.sp_DateRange @startdate, @ndays;
 
-SET @d = GETDATE();
-SET @n = 7;
-
-EXEC dbo.populatetable @d,@n;
-
-SELECT * FROM dbo.DateRange;
+select * from dbo.DateRange;
 
 
 ------ 5-3
 
 /* With three tables as defined below: */
+
+
+use shashank;
+
+drop table SaleOrderDetail;
+drop table SaleOrder;
+drop table Customer;
+
 CREATE TABLE Customer
 (CustomerID VARCHAR(20) PRIMARY KEY,
 CustomerLName VARCHAR(30),
@@ -123,26 +131,18 @@ PRIMARY KEY (OrderID, ProductID));
  in the CustomerStatus column. */
 
  
-DROP TRIGGER dbo.UpdateCustomerStatus;
+drop trigger dbo.trig_CustomerStatus_update;
 
-CREATE TRIGGER dbo.UpdateCustomerStatus 
-ON dbo.SaleOrder 
-FOR INSERT,UPDATE
-AS
-	BEGIN
-		DECLARE @ThisCustomerID INT;
-		DECLARE @TotalAmountBeforeTax FLOAT;
-	SELECT @ThisCustomerID = CustomerID FROM inserted;
-SET
-@TotalAmountBeforeTax = ( Select Sum(OrderAmountBeforeTax) FROM dbo.SaleOrder WHERE CustomerID = @ThisCustomerID);
+create trigger dbo.trig_CustomerStatus_update on dbo.SaleOrder for insert, update as
+begin
+	declare @CID int
+	declare @TotalOrderAmountBeforeTax float
+	select @CID = CustomerID from ins;
 
-IF @TotalAmountBeforeTax >= 5000
-BEGIN
-UPDATE
-	dbo.Customer
-SET
-	CustomerStatus = 'Preffered'
-WHERE
-	CustomerID = @ThisCustomerID;
-END;
-END;
+	set @TotalOrderAmountBeforeTax = (select sum(OrderAmountBeforeTax) from SaleOrder where CustomerID = @CID);
+	if @TotalOrderAmountBeforeTax >= 5000
+	begin
+		update Customer
+		set CustomerStatus = 'Preferred' where CustomerID = @CID;
+	end;
+end;

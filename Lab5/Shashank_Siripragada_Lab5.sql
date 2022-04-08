@@ -137,7 +137,7 @@ create trigger dbo.trig_CustomerStatus_update on dbo.SaleOrder for insert, updat
 begin
 	declare @CID int
 	declare @TotalOrderAmountBeforeTax float
-	select @CID = CustomerID from ins;
+	select @CID = CustomerID from inserted;
 
 	set @TotalOrderAmountBeforeTax = (select sum(OrderAmountBeforeTax) from SaleOrder where CustomerID = @CID);
 	if @TotalOrderAmountBeforeTax >= 5000
@@ -146,3 +146,15 @@ begin
 		set CustomerStatus = 'Preferred' where CustomerID = @CID;
 	end;
 end;
+
+--test for 5-3
+
+insert into Customer values ('1', 'Luke', 'Skywalker', 'Not A Sith');
+
+insert into SaleOrder values ('1', getdate(), 3000);
+
+select * from Customer;
+
+insert into SaleOrder values ('1', getdate(), 3000);
+
+select * from Customer;

@@ -61,20 +61,18 @@ ORDER BY o.TerritoryID;
 
 Select 
 City
---, ShipToAddressID
 , ProductID
 , [Total Sold Quantity]
 from (
 SELECT 
-soh.ShipToAddressID
-, pa.City as City
+pa.City as City
 , sod.ProductID
 , sum(sod.OrderQty) as [Total Sold Quantity]
-, RANK() OVER  (PARTITION BY soh.ShipToAddressID  ORDER BY sum(sod.OrderQty) DESC) AS Rank
+, RANK() OVER  (PARTITION BY City  ORDER BY sum(sod.OrderQty) DESC) AS Rank
 FROM Sales.SalesOrderHeader soh 
 JOIN Sales.SalesOrderDetail sod ON soh.SalesOrderID = sod.SalesOrderID
 join Person.Address pa on soh.ShipToAddressID = pa.AddressID
-group by soh.ShipToAddressID, pa.City, sod.ProductID
+group by pa.City, sod.ProductID
 having sum(sod.OrderQty)>100
 )a where rank=1
 order by City

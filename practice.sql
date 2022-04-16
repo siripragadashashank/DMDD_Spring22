@@ -318,3 +318,130 @@ for xml path('')), 1, 2, '') as top3
 from temp t2
 group by SAlesPersonID, Fullname
 
+
+---------------------
+SELECT TerritoryID, [280], [281], [282], [283], [284], [285]
+FROM 
+(SELECT TerritoryID, SalesPersonID, SalesOrderID
+FROM Sales.SalesOrderHeader) SourceTable
+PIVOT
+(
+COUNT (SalesOrderID)
+FOR SalesPersonID IN
+( [280], [281], [282], [283], [284], [285] )
+) AS PivotTable;
+
+-- Question 2
+/* Rewrite the following query to present the same data in a horizontal format,
+   as listed below, using the SQL PIVOT command. */
+SELECT DATENAME(mm, OrderDate) AS [Month], CustomerID,
+       SUM(TotalDue) AS TotalOrder
+FROM   Sales.SalesOrderHeader
+WHERE CustomerID BETWEEN 30020 AND 30024
+GROUP BY CustomerID, DATENAME(mm, OrderDate), MONTH(OrderDate)
+ORDER BY MONTH(OrderDate);
+
+
+select [Month],
+isnull(cast([30020] as int), 0) [30020],
+isnull(cast([30021] as int), 0) [30021],
+isnull(cast([30022] as int), 0) [30022],
+isnull(cast([30023] as int), 0) [30023],
+isnull(cast([30024] as int), 0) [30024]
+from (
+SELECT DATENAME(mm, OrderDate) AS [Month], CustomerID,
+       SUM(TotalDue) AS TotalOrder
+FROM   Sales.SalesOrderHeader
+WHERE CustomerID BETWEEN 30020 AND 30024
+GROUP BY CustomerID, DATENAME(mm, OrderDate), MONTH(OrderDate)
+)t
+pivot
+(
+sum(totalorder)
+for CustomerID in 
+([30020], [30021], [30022], [30023], [30024])
+) as pivottable
+order by month([Month] + ' 1 2014')
+
+
+----------------------
+
+
+
+/* Rewrite the following query to present the same data in a horizontal format,
+   as listed below, using the SQL PIVOT command. */
+
+SELECT TerritoryID, CAST(OrderDate AS DATE) [Order Date], CAST(SUM(TotalDue) AS int) AS [Customer Count]
+FROM Sales.SalesOrderHeader
+WHERE OrderDate BETWEEN '3-1-2008' AND '3-5-2008'
+GROUP BY TerritoryID, OrderDate
+ORDER BY TerritoryID, OrderDate;
+
+/*
+TerritoryID	2008-3-1	2008-3-2	2008-3-3	2008-3-4	2008-3-5
+1			497609		5629		3582		5561		6511
+2			219197		0			0			0			0
+3			288595		0			0			0			0
+4			524907		9878		9755		9308		16161
+5			221203		0			0			0			0
+6			526176		1361		5687		276			2437
+7			104392		3609		3725		978			221
+8			158651		49			7910		6152		11118
+9			250353		14311		6754		13634		18050
+10			368209		9960		2644		3894		8972
+*/
+
+select TerritoryID,
+isnull(cast([2008-3-1] as int), 0) [2008-3-1],
+isnull(cast([2008-3-2] as int), 0) [2008-3-2],
+isnull(cast([2008-3-3] as int), 0) [2008-3-3],
+isnull(cast([2008-3-4] as int), 0) [2008-3-4],
+isnull(cast([2008-3-5] as int), 0) [2008-3-5]
+from (
+SELECT TerritoryID,OrderDate, TotalDue
+FROM Sales.SalesOrderHeader
+WHERE OrderDate BETWEEN '3-1-2008' AND '3-5-2008'
+
+)t
+pivot
+(SUM(TotalDue)
+for OrderDate in 
+([2008-3-1], [2008-3-2],	[2008-3-3],	[2008-3-4],	[2008-3-5])
+) as pivotable
+
+
+-- Question 2 (6 points)
+
+/* Write a query to retrieve the top 3 products for each year.
+   Use OrderQty of SalesOrderDetail to calculate the total sold quantity.
+   The top 3 products have the 3 highest total sold quantities.
+   Also calculate the top 3 products' total sold quantity for the year.
+   Return the data in the following format.
+
+Year	Total Sale		Top3Products
+2005	1598			709, 712, 715
+2006	5703			863, 715, 712
+2007	9750			712, 870, 711
+2008	8028			870, 712, 711
+*/
+
+with temp as (
+
+select 
+year(OrderDate) Year, productId, sum(OrderQty) as total , 
+rank() over(partition by year(OrderDate) order by sum(OrderQty) desc) rank
+from Sales.SalesOrderDetail sod
+join Sales.SalesOrderHeader soh
+on sod.SalesOrderId=Soh.SalesOrderID
+group by year(orderdate), productid
+)
+
+select Year, sum(total) as [Total Sale], 
+stuff(( select ', ' + cast(productid as varchar) 
+from temp t1
+where t1.year=t2.year
+and rank<=3
+for xml path('')), 1, 2, '') Top3Products
+from temp t2
+where rank<=3
+group by year

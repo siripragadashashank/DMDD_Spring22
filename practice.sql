@@ -445,3 +445,307 @@ for xml path('')), 1, 2, '') Top3Products
 from temp t2
 where rank<=3
 group by year
+
+
+-- Question 1 (2 points)
+USE AdventureWorks2008R2;
+/* The following SQL query generates a report in a vertical format.
+   Please convert the query to a PIVOT query that creates a report
+   containing the same data but in a horizontal format.
+   The returned report should have the format like the one listed below,
+   with NULL converted to 0. Use an alias to create a column heading.
+   The example format below may not contain all the returned data. */
+    
+SELECT TerritoryID, CAST(OrderDate AS DATE) [Order Date], 
+       SUM(TotalDue) AS [Sale Amount]
+FROM Sales.SalesOrderHeader
+WHERE OrderDate BETWEEN '5-1-2008' AND '5-5-2008'
+GROUP BY TerritoryID, OrderDate
+ORDER BY TerritoryID, OrderDate;
+/*
+TerritoryID	2008-5-1		2008-5-2	2008-5-3	2008-5-4	2008-5-5
+	1		640355.3651		3513.7676	10004.2614	2220.8956	7148.2785
+	2		187500.0667		0.00		0.00		0.00		0.00
+	3		281836.1068		0.00		0.00		0.00		0.00
+*/
+
+select TerritoryID,
+
+isnull([2008-5-1],0)[2008-5-1],isnull([2008-5-2],0)[2008-5-2],isnull([2008-5-3],0)[2008-5-3],isnull([2008-5-4],0)[2008-5-4],isnull([2008-5-5],0)[2008-5-5]
+from(
+    
+SELECT TerritoryID, OrderDate  , 
+       SUM(TotalDue) as TotalDue
+FROM Sales.SalesOrderHeader
+WHERE OrderDate BETWEEN '5-1-2008' AND '5-5-2008'
+GROUP BY TerritoryID, OrderDate)t
+pivot
+(
+sum(totaldue)
+for OrderDate in ([2008-5-1],[2008-5-2],[2008-5-3],[2008-5-4],[2008-5-5])
+) pivottable
+
+---------------------
+
+
+
+----LAB 4 PART B
+
+/* Use the content of AdventureWorks and write a query to list the top 3 products included in an order for 
+all orders. The top 3 products have the 3 highest order quantities. If there is a tie, it needs to be 
+retrieved. The report needs to have the following format. Sort the returned data by the sales order 
+column.
+
+
+SalesOrderID   Products
+43659          709, 711, 777, 714
+43660          762, 758
+43661          708, 776, 712, 715
+43662          758, 770, 762
+43663          760                                */
+
+
+with temp as (
+select soh.SalesOrderID, ProductId , OrderQty
+, rank() over(partition by soh.SalesOrderID order by OrderQty desc) rank
+from Sales.SalesOrderHeader soh
+join Sales.SalesOrderDetail sod on soh.SalesOrderID=sod.SalesOrderID
+)
+select distinct SalesOrderId, 
+stuff((select ', ' + cast(ProductID as varchar)
+from temp t1
+where t1.SalesOrderID=t2.SalesOrderID
+and rank<=3
+for xml path('')), 1,2, '') as Top3
+from temp t2
+where t2.rank<=3
+--group by t2.SalesOrderID
+order by t2.SalesOrderID
+
+
+---------------------------------
+
+/* Using the content of AdventureWorks, write a query to retrieve
+all unique customers with all salespersons each customer has dealt with. Exclude the customers who have never worked with a salesperson.
+Sort the returned data by CustomerID in the descending order.
+The result should have the following format.
+Hint: Use the SalesOrderHeadrer table.
+CustomerID SalesPersonID 30118 275, 277 30117 275, 277 30116 276
+30115 289 30114 290 30113 282 30112 280, 284 */
+
+with temp as (
+Select CustomerID, SalesPersonID from Sales.SalesOrderHeader)
+select distinct CustomerID, 
+stuff((select distinct ', ' + cast(SalesPersonID as varchar)
+from temp t1
+where t1.CustomerId=t2.CustomerID
+and SalesPersonID is not null
+for xml path('')),1,2,'')SalesPersons
+from temp t2
+order by CustomerID desc
+
+SELECT DISTINCT soh2.CustomerID,
+STUFF((SELECT DISTINCT ', '+RTRIM(CAST(SalesPersonID as char))
+FROM Sales.SalesOrderHeader soh1
+WHERE soh1.CustomerID = soh2.CustomerID
+FOR XML PATH('')) , 1, 2, '') AS SalesPersonIDs
+FROM Sales.SalesOrderHeader soh2
+WHERE SalesPersonID IS NOT NULL
+ORDER BY CustomerID DESC;
+
+
+-----------------------
+
+--Part C (2 points)
+/*Use the content of AdventureWorks and write a query to list all distinct products included in an order for all orders. 
+ * The report needs to have the following format. Sort the returned data by the sales order column. 
+ * Within each order, sort the products in the ascending order.
+43659   709, 711, 712, 714, 716, 771, 772, 773, 774, 776, 777, 778
+43660   758, 762
+43661   708, 711, 712, 715, 716, 741, 742, 743, 745, 747, 773, 775, 776, 777, 778*/
+
+with temp as (
+select SalesOrderID, ProductID from Sales.SalesOrderDetail)
+Select distinct SalesOrderID, 
+stuff((select distinct ', ' + cast(ProductID as varchar)
+from temp t1
+where t1.SalesOrderID=t2.SalesOrderID
+for xml path('')), 1, 2, '') alllist
+from temp t2
+order by SalesOrderID, alllist
+
+
+-- Question 3 (6 points)
+
+/* In a tech company, a qualified employee may get multiple salary raises
+   in a year. There is a business rule that no employee can be given a total
+   of more than $40,000 as raises in a year. Any attempt to give an
+   employee a total of more than $40,000 for raises in a year must be logged
+   in an audit table and the violating raise is not allowed.
+
+   Given the following 3 tables, please write a trigger to implement
+   the business rule. The rule must be enforced every year.
+   Assume only one raise is entered in the database at a time.
+   You can just consider the INSERT scenarios.
+*/
+use shashank
+
+
+---Lab 5-3
+/* CREATE 3 tables as listed below in your own database. 
+CREATE TABLE Customer
+(CustomerID VARCHAR(20) PRIMARY KEY,
+CustomerLName VARCHAR(30),
+CustomerFName VARCHAR(30),
+CustomerStatus VARCHAR(10));
+CREATE TABLE SaleOrder
+(OrderID INT IDENTITY PRIMARY KEY,
+CustomerID VARCHAR(20) REFERENCES Customer(CustomerID),
+OrderDate DATE,
+OrderAmountBeforeTax INT);
+CREATE TABLE SaleOrderDetail
+(OrderID INT REFERENCES SaleOrder(OrderID),
+ProductID INT,
+Quantity INT,
+UnitPrice INT,
+PRIMARY KEY (OrderID, ProductID));
+ Write a trigger to put the total sale order amount before tax
+ (unit price * quantity for all items included in an order) 
+ in the OrderAmountBeforeTax column of SaleOrder
+ whenever there is a change in SaleOrderDetail. */
+ --create database shatest
+ use shatest
+ 			CREATE TABLE Customer
+			(CustomerID VARCHAR(20) PRIMARY KEY,
+			 CustomerLName VARCHAR(30),
+			 CustomerFName VARCHAR(30),
+			 CustomerStatus VARCHAR(10));
+
+			CREATE TABLE SaleOrder
+			(OrderID INT IDENTITY PRIMARY KEY,
+			 CustomerID VARCHAR(20) REFERENCES Customer(CustomerID),
+			 OrderDate DATE,
+			 OrderAmountBeforeTax INT);
+
+			CREATE TABLE SaleOrderDetail
+			(OrderID INT REFERENCES SaleOrder(OrderID),
+			 ProductID INT,
+			 Quantity INT,
+			 UnitPrice INT,
+			 PRIMARY KEY (OrderID, ProductID));
+
+			CREATE TRIGGER trUpdateCustomerStatus
+			ON dbo.saleOrder
+			AFTER INSERT, UPDATE, DELETE
+			AS BEGIN
+				DECLARE @total money = 0;
+				DECLARE @custid varchar(20);
+				DECLARE @status varchar(10);
+
+				SELECT @custid = isnull (i.CustomerID, d.CustomerID)
+				   FROM inserted i full join deleted d 
+				   ON i.CustomerID = d.CustomerID;
+
+				SELECT @total = sum(OrderAmountBeforeTax)
+				   FROM saleOrder
+   				   WHERE CustomerID = @custid;
+
+				IF @total > 5000
+					SET @status = 'preferred'
+				ELSE
+					SET @status = 'regular';
+
+				UPDATE Customer
+					SET CustomerStatus = @status
+					WHERE CustomerID = @custid 
+			END
+
+			-- TEST
+			INSERT Customer VALUES ('008','Rachel','Ford','Regular');
+			INSERT SaleOrder VALUES ('008','2018-03-21',2000);
+			SELECT * FROM Customer;
+
+			INSERT SaleOrder VALUES ('008','2018-03-23',5000);
+			SELECT * FROM Customer;
+
+			UPDATE SaleOrder SET OrderAmountBeforeTax = 2500
+				   WHERE CustomerID = '008' and OrderDate = '2018-03-23';
+			SELECT * FROM Customer;
+
+			INSERT SaleOrder VALUES ('008','2018-03-28',6000);
+			SELECT * FROM Customer;
+
+			DELETE SaleOrder WHERE CustomerID = '008' and OrderDate = '2018-03-28';
+			SELECT * FROM Customer;
+
+			-- DROP
+			DROP TABLE saleorderdetail;
+			DROP TABLE saleorder;
+			DROP TABLE customer;
+
+
+-- Create a table-valued function  
+CREATE FUNCTION dbo.GetDateRange  
+(@StartDate date, @NumberOfDays int) 
+RETURNS @DateList TABLE (Position int, DateValue date) 
+AS BEGIN 
+    DECLARE @Counter int = 0; 
+    WHILE (@Counter < @NumberOfDays)  
+    BEGIN 
+        INSERT INTO @DateList  
+            VALUES(@Counter + 1, 
+                   DATEADD(day,@Counter,@StartDate)); 
+        SET @Counter += 1; 
+    END 
+    RETURN; 
+END 
+GO 
+ 
+-- Execute the new function 
+ 
+SELECT * FROM dbo.GetDateRange('2009-12-31',14); 
+ 
+ 
+-- Create a table-valued function 
+ 
+CREATE FUNCTION GetLastOrdersForCustomer  
+(@CustomerID int, @NumberOfOrders int) 
+RETURNS TABLE 
+AS 
+RETURN (SELECT TOP(@NumberOfOrders) 
+               SalesOrderID, 
+               OrderDate, 
+               PurchaseOrderNumber 
+        FROM AdventureWorks2008R2.Sales.SalesOrderHeader 
+        WHERE CustomerID = @CustomerID 
+        ORDER BY OrderDate DESC, SalesOrderID DESC 
+        ); 
+GO 
+ 
+-- Execute the new function 
+ 
+SELECT * FROM GetLastOrdersForCustomer(17288,2); 
+
+
+USE AdventureWorks2014
+GO
+/************EXAMPLE 1*****************************/
+-- Clean up what we did before
+DROP TRIGGER Sales.OrderDetailNotDiscontinued
+CREATE TRIGGER OrderDetailNotDiscontinued
+   ON Sales.SalesOrderDetail
+   AFTER INSERT, UPDATE
+AS
+   IF EXISTS 
+      (
+       SELECT 'True' 
+       FROM Inserted i
+       JOIN Production.Product p
+          ON i.ProductID = p.ProductID
+       WHERE p.DiscontinuedDate IS NOT NULL
+      )
+   BEGIN
+      ROLLBACK TRAN
+      RAISERROR('Order Item is discontinued. Transaction Failed.',16,1)
+   END
+-- Clean up what we did b

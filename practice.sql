@@ -1,4 +1,4 @@
-use AdventureWorks2008R2;
+﻿use AdventureWorks2008R2;
 
 
 -------------
@@ -177,7 +177,7 @@ left join Sales.SalesOrderHeader soh on sod.SalesOrderID = soh.SalesOrderID
 group by year(OrderDate), sod.ProductID
 )
 select t2.year
-, sum(t2.totalprod)/t1.total * 100 
+--, sum(t2.totalprod)/t1.total * 100 
 , cast(sum(t2.totalprod) as decimal) / t1.total * 100 [% of Total Sale]
 ,stuff((select ', ' + cast(ProductID as varchar) 
 from temp2
@@ -185,7 +185,136 @@ where t2.year = year and topprods<=5
 for xml path('')), 1, 2, '') as top5
 from temp2 t2
 join temp1 t1 on t1.year=t2.year and t2.topprods<=5
-group by t2.year, t1.total
+--group by t2.year, t1.total
 
 
+---------------------------------------------------
+
+
+-- Question 3 (3 points)
+
+/* Write a query to retrieve the top 3 customers, based on the total purchase,
+   for each region. The top 3 customers have the 3 highest total purchase amounts.
+   Use TotalDue of SalesOrderHeader to calculate the total purchase.
+   Also calculate the top 3 customers' total purchase amount.
+   Return the data in the following format.
+territoryid	Total Sale	Top5Customers
+	1		2639574		29818, 29617, 29580
+	2		1899953		29701, 29966, 29844
+	3		2203384		29827, 29913, 29924
+	4		2521259		30117, 29646, 29716
+	5		1950980		29715, 29507, 29624
+	6		2742459		29722, 29614, 29639
+	7		1873658		30103, 29712, 29923
+	8		938793		29995, 29693, 29917
+	9		583812		29488, 29706, 30059
+	10		1565145		30050, 29546, 29587
+*/
+
+
+with temp as(
+select TerritoryID, CustomerID, sum(TotalDue) total2
+, rank() over(partition by TerritoryID order by sum(TotalDue) desc) rank
+from Sales.SalesOrderHeader soh
+group by TerritoryID, CustomerID)
+
+select t2.TerritoryID
+, cast(sum(t2.total2) as int) as [Total Sale]
+, stuff(
+		(select ', ' + cast(t1.CustomerId as varchar)
+		from temp t1
+		where 
+		t1.TerritoryID = t2.TerritoryID and
+		t1.rank<=3 
+		for xml path('')), 1, 2, '') as Top3
+from temp t2
+where t2.rank<=3
+group by TerritoryID
+order by TerritoryID
+
+
+
+-- Exercise Question 1
+/*
+Using an AdventureWorks database, write a query to
+retrieve the top 3 products for the customer id's between 30000 and 30005.
+The top 3 products have the 3 highest total sold quantities.
+The quantity sold for a product included in an order is in SalesOrderDetail.
+Use the quantity sold to calculate the total sold quantity. If there is
+a tie, your solution must retrieve the tie.
+Return the data in the following format.
+CustomerID Top3Products
+30000 869, 809, 779
+30001 813, 794
+30002 998, 736, 875, 835, 836
+30003 863, 771, 783
+30004 709, 778, 776, 777
+30005 966, 972, 954, 948, 965
+*/
+
+with temp as (
+Select CustomerID, ProductID, sum(OrderQty) as total 
+, rank() over(partition by CustomerID order by sum(OrderQty) desc) as rank
+from Sales.SalesOrderDetail sod join Sales.SalesOrderHeader soh 
+on sod.SalesOrderID = soh.SalesOrderID
+where CustomerID  between 30000 and 30005
+group by CustomerID, ProductID
+)
+select CustomerID, 
+stuff((select ', '+cast(ProductID as varchar)
+from temp t1
+where t1.CustomerID = t2.CustomerID
+and rank<=3 
+for xml path('')), 1, 2, '') as top3
+from temp t2
+--group by CustomerID
+
+
+-----------------
+
+
+-- Exercise Question 2
+/*
+Using an AdventureWorks database, write a query to
+retrieve the top 3 orders for each salesperson.
+The top 3 orders have the 3 highest TotalDue values. TotalDue 
+is in SalesOrderHeader. If there is a tie, your solution 
+must retrieve the tie.
+Return the data in the following format. The name is 
+a salesperson's name.
+SalesPersonID FullName Top3Orders
+274 Jiang, Stephen 51830, 57136, 53465
+275 Blythe, Michael 47395, 53621, 50289
+276 Mitchell, Linda 47355, 51822, 57186
+277 Carson, Jillian 46660, 43884, 44528
+278 Vargas, Garrett 44534, 43890, 58932
+279 Reiter, Tsvi 44518, 43875, 47455
+280 Ansman-Wolfe, Pamela 47033, 67297, 53518
+281 Ito, Shu 51131, 55282, 47369
+282 Saraiva, Jos 53573, 47451, 51823
+283 Campbell, David 46643, 51711, 51123
+284 Mensa-Annan, Tete 69508, 50297, 48057
+285 Abbas, Syed 53485, 53502, 58915
+286 Tsoflias, Lynn 53566, 51814, 71805
+287 Alberts, Amy 59064, 58908, 51837
+288 Valdez, Rachel 55254, 51761, 69454
+289 Pak, Jae 46616, 46607, 46645
+290 Varkey Chudukatil, Ranjit 46981, 51858, 57150
+*/
+
+
+with temp as(
+select SalesPersonID, SAlesorderID, totaldue , (LastName+ ', ' + FirstName) FullName
+, rank() over(partition by SalesPersonID order by totaldue desc) as rank
+from Sales.SalesOrderHeader soh
+join Person.Person pb on Soh.SalesPersonID=pb.BusinessEntityID
+)
+select t2.SalesPersonID, FullName
+, stuff((select ', '+ cast(SalesOrderID as varchar)
+from temp t1
+where t1.SalesPersonID=t2.SalesPersonID
+and rank<=3
+for xml path('')), 1, 2, '') as top3
+from temp t2
+group by SAlesPersonID, Fullname
 

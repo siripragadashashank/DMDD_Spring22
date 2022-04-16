@@ -110,4 +110,82 @@ order by orderdate
 For example, if Customer A has purchased more than 10 distinct products and never purchased a product more than once for all of his orders, then Customer A should be returned.
 Sort the returned data by the total number of different products purchased by a customer in the descending order. Include only the customer id in the report. */
 
+select CustomerID from Sales.SalesOrderDetail sod
+join Sales.SalesOrderHeader soh on sod.SalesOrderID = Soh.SalesOrderID
+group by CustomerID
+having count(distinct ProductID) = count(ProductID) and count(distinct ProductID) >10
+order by count(distinct OrderQty) desc
+
+
+--------------------------------------
+
+
+--- lab 4
+
+---------B-1
+
+/* Using the content of AdventureWorks, write a query to retrieve
+all unique customers with all salespeople they have dealt with.
+If a customer has never worked with a salesperson, make the
+'Salesperson ID' column blank instead of displaying NULL.
+Sort the returned data by CustomerID in the descending order.
+The result should have the following format.
+Hint: Use the SalesOrderHeadrer table.
+CustomerID SalesPerson ID
+30118 275, 277
+30117 275, 277
+30116 276
+30115 289
+30114 290
+30113 282
+30112 280, 284
+*/
+
+use AdventureWorks2008R2;
+
+
+Select distinct CustomerId,
+stuff((select distinct ', ' + cast(SalesPersonID as varchar)
+from Sales.SalesOrderHeader s
+where s.CustomerID = t.CustomerID
+for XML path('')), 1, 2, '') as SalesPersons
+from Sales.SalesOrderHeader t
+order by CustomerID desc
+
+--------------------- 3-2
+
+
+/* Using the content of AdventureWorks, write a query to retrieve the top five products for each year. Use OrderQty of SalesOrderDetail to calculate the total quantity sold.
+The top five products have the five highest sold quantities. Also calculate the top five products' sold quantity for a year as a percentage of the total quantity sold for the year.
+Return the data in the following format.
+Year % of Total Sale Top5Products
+2005 19.58980418600 709, 712, 715, 770, 760
+2006 13.70859187700 863, 715, 712, 711, 852
+2007 12.39464630800 712, 870, 711, 708, 715
+2008 15.68128704000 870, 712, 711, 708, 707
+*/
+
+with temp1 as(
+Select year(OrderDate) as Year, sum(OrderQty) as total from Sales.SalesOrderDetail sod
+left join Sales.SalesOrderHeader soh on sod.SalesOrderID = soh.SalesOrderID
+group by year(OrderDate)),
+temp2 as (
+Select year(OrderDate) as Year, sod.ProductID, sum(OrderQty) as totalprod 
+, rank() over(partition by year(OrderDate) order by sum(OrderQty) desc) as topprods
+from Sales.SalesOrderDetail sod
+left join Sales.SalesOrderHeader soh on sod.SalesOrderID = soh.SalesOrderID
+group by year(OrderDate), sod.ProductID
+)
+select t2.year
+, sum(t2.totalprod)/t1.total * 100 
+, cast(sum(t2.totalprod) as decimal) / t1.total * 100 [% of Total Sale]
+,stuff((select ', ' + cast(ProductID as varchar) 
+from temp2
+where t2.year = year and topprods<=5
+for xml path('')), 1, 2, '') as top5
+from temp2 t2
+join temp1 t1 on t1.year=t2.year and t2.topprods<=5
+group by t2.year, t1.total
+
+
 
